@@ -36,22 +36,18 @@ def load_kca():
                 """POLYGON ((19.973144531249996 41.832735062152615, 19.973144531249996 43.265206318396025, 21.8902587890625 43.265206318396025, 21.8902587890625 41.832735062152615, 19.973144531249996 41.832735062152615))""")
     )
     su1 = SpatialUnit.objects.create(
-        name='',
         geometry=('SRID=4326;POINT(20.631539 42.32537)'),
         project=proj,
         type='BU')
     su2 = SpatialUnit.objects.create(
-        name='',
         geometry=('SRID=4326;POINT(20.636637 42.320297)'),
         project=proj,
         type='PA')
     su3 = SpatialUnit.objects.create(
-        name='',
         geometry=('SRID=4326;POINT(20.636772 42.320147)'),
         project=proj,
         type='PA')
     su4 = SpatialUnit.objects.create(
-        name='',
         geometry=('SRID=4326;POINT(21.16524 42.661555)'),
         project=proj,
         type='PA')
