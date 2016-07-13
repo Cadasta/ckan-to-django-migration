@@ -15,21 +15,10 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
 
 def load_kca():
     """Load Kivulini data."""
-    from organization.models import Organization, OrganizationRole, Project
+    from organization.models import Organization, Project
     from party.models import Party, TenureRelationship, TenureRelationshipType
     from party.models import TenureRelationshipType
     from spatial.models import SpatialUnit
-    from accounts.models import User
-
-    user = User.objects.create(
-        username='kcaadmin',
-        email='info@kca.domain',
-        full_name='KCA Admin',
-        email_verified=True,
-        last_login=datetime.now(tz=timezone.utc))
-
-    user.set_password('password')
-    user.save()
 
     org = Organization.objects.create(
         name='KCA', slug='kca',
@@ -37,10 +26,6 @@ def load_kca():
         urls=[''],
         logo='https://s3.amazonaws.com/cadasta-dev-tmp/etl-test/kca.png',
         contacts=[]
-    )
-
-    OrganizationRole.objects.create(
-        organization=org, user=user, admin=True
     )
 
     proj = Project.objects.create(
@@ -107,15 +92,52 @@ def load_kca():
     )
 
 
+def load_users():
+    from organization.models import Organization, OrganizationRole
+    from accounts.models import User
+
+    users = [{'username': 'lmeco',
+              'full_name': 'Lorena Meco', 'admin': False},
+             {'username': 'kahmetaj', 'full_name':
+              'Korab Ahmetaj', 'admin': True},
+             {'username': 'kcaadmin', 'full_name':
+              'KCA Admin', 'admin': True}]
+
+    org = Organization.objects.get(slug='kca')
+
+    for user in users:
+        u = User.objects.create(
+            username=user['username'],
+            email='',
+            full_name=user['full_name'],
+            email_verified=True,
+            last_login=datetime.now(tz=timezone.utc)
+        )
+        u.set_password('password')
+        u.save()
+        OrganizationRole.objects.create(
+            organization=org, user=u, admin=user['admin']
+        )
+
+def drop_users():
+    from organization.models import OrganizationRole
+    from accounts.models import User
+    users = ['kcaadmin', 'lmeco', 'kahmetaj']
+    for user in users:
+        try:
+            u = User.objects.get(username=user)
+            o = OrganizationRole.objects.get(user=u)
+            o.delete()
+            u.delete()
+        except:
+            pass
+
+
 def drop_kca():
     from organization.models import Organization
-    from accounts.models import User
+    drop_users()
     try:
         Organization.objects.get(slug='kca').delete()
-    except:
-        pass
-    try:
-        User.objects.get(username='kcaadmin').delete()
     except:
         pass
 
@@ -131,3 +153,4 @@ if __name__ == '__main__':
     else:
         drop_kca()
         load_kca()
+        load_users()
