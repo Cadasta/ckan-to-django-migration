@@ -3,10 +3,11 @@
 import argparse
 import os
 import sys
+from datetime import datetime, timezone
 
 import django
 
-sys.path.append('../cadasta-platform/cadasta')
+sys.path.append('../cadasta')
 
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
@@ -14,9 +15,20 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
 
 def load_kivulini():
     """Load Kivulini data."""
-    from organization.models import Organization, Project
+    from organization.models import Organization, OrganizationRole, Project
     from party.models import Party, TenureRelationship, TenureRelationshipType
     from spatial.models import SpatialUnit
+    from accounts.models import User
+
+    user = User.objects.create(
+        username='kivuliniadmin',
+        email='info@kivulini.domain',
+        full_name='Kivulini Admin',
+        email_verified=True,
+        last_login=datetime.now(tz=timezone.utc))
+
+    user.set_password('password')
+    user.save()
 
     org = Organization.objects.create(
         name='Kivulini Trust', slug='kivulini-trust',
@@ -25,6 +37,11 @@ def load_kivulini():
         logo='https://s3.amazonaws.com/cadasta-dev-tmp/etl-test/kivulini-trust.jpg',
         contacts=[{'email': 'info@kivulinitrust.org'}]
     )
+
+    OrganizationRole.objects.create(
+        organization=org, user=user, admin=True
+    )
+
     proj = Project.objects.create(
         organization=org,
         name='Kivulini Trust Training',
@@ -69,19 +86,16 @@ def load_kivulini():
 
 
 def drop_kivulini():
-    from organization.models import Organization, Project
-    from spatial.models import SpatialUnit
-    from party.models import Party, TenureRelationship
-    for org in Organization.objects.filter(name__contains='Kivulini'):
-        for proj in Project.objects.filter(organization=org):
-            for s in SpatialUnit.objects.filter(project=proj):
-                s.delete()
-            for p in Party.objects.filter(project=proj):
-                p.delete()
-            for t in TenureRelationship.objects.filter(project=proj):
-                t.delete()
-            proj.delete()
-        org.delete()
+    from organization.models import Organization
+    from accounts.models import User
+    try:
+        Organization.objects.get(slug='kivulini-trust').delete()
+    except:
+        pass
+    try:
+        User.objects.get(username='kivuliniadmin').delete()
+    except:
+        pass
 
 
 if __name__ == '__main__':
