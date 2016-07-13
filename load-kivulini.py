@@ -15,20 +15,9 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
 
 def load_kivulini():
     """Load Kivulini data."""
-    from organization.models import Organization, OrganizationRole, Project
+    from organization.models import Organization, Project
     from party.models import Party, TenureRelationship, TenureRelationshipType
     from spatial.models import SpatialUnit
-    from accounts.models import User
-
-    user = User.objects.create(
-        username='kivuliniadmin',
-        email='info@kivulini.domain',
-        full_name='Kivulini Admin',
-        email_verified=True,
-        last_login=datetime.now(tz=timezone.utc))
-
-    user.set_password('password')
-    user.save()
 
     org = Organization.objects.create(
         name='Kivulini Trust', slug='kivulini-trust',
@@ -36,10 +25,6 @@ def load_kivulini():
         urls=['http://www.kivulinitrust.org'],
         logo='https://s3.amazonaws.com/cadasta-dev-tmp/etl-test/kivulini-trust.jpg',
         contacts=[{'email': 'info@kivulinitrust.org'}]
-    )
-
-    OrganizationRole.objects.create(
-        organization=org, user=user, admin=True
     )
 
     proj = Project.objects.create(
@@ -85,18 +70,55 @@ def load_kivulini():
     )
 
 
+def load_users():
+    from organization.models import Organization, OrganizationRole
+    from accounts.models import User
+
+    users = [{'username': 'marena_namati',
+              'full_name': 'Marena Brinkhurst', 'admin': True},
+             {'username': 'eddy', 'full_name':
+              'Eddy Ochieng', 'admin': True},
+             {'username': 'kivuliniadmin', 'full_name':
+              'Kivulini Trust Admin', 'admin': True}]
+
+    org = Organization.objects.get(slug='kivulini-trust')
+
+    for user in users:
+        u = User.objects.create(
+            username=user['username'],
+            email='',
+            full_name=user['full_name'],
+            email_verified=True,
+            last_login=datetime.now(tz=timezone.utc)
+        )
+        u.set_password('password')
+        u.save()
+        OrganizationRole.objects.create(
+            organization=org, user=u, admin=user['admin']
+        )
+
+
+def drop_users():
+    from organization.models import OrganizationRole
+    from accounts.models import User
+    users = ['kivuliniadmin', 'eddy', 'marena_namati']
+    for user in users:
+        try:
+            u = User.objects.get(username=user)
+            o = OrganizationRole.objects.get(user=u)
+            o.delete()
+            u.delete()
+        except:
+            pass
+
+
 def drop_kivulini():
     from organization.models import Organization
-    from accounts.models import User
+    drop_users()
     try:
         Organization.objects.get(slug='kivulini-trust').delete()
     except:
         pass
-    try:
-        User.objects.get(username='kivuliniadmin').delete()
-    except:
-        pass
-
 
 if __name__ == '__main__':
     django.setup()
@@ -110,3 +132,4 @@ if __name__ == '__main__':
     else:
         drop_kivulini()
         load_kivulini()
+        load_users()

@@ -15,20 +15,9 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
 
 def load_opdp():
     """Load OPDP data."""
-    from organization.models import Organization, OrganizationRole, Project
+    from organization.models import Organization, Project
     from party.models import Party, TenureRelationship, TenureRelationshipType
     from spatial.models import SpatialUnit
-    from accounts.models import User
-
-    user = User.objects.create(
-        username='opdpadmin',
-        email='info@opdp.domain',
-        full_name='OPDP Admin',
-        email_verified=True,
-        last_login=datetime.now(tz=timezone.utc))
-
-    user.set_password('password')
-    user.save()
 
     org = Organization.objects.create(
         name='OPDP', slug='opdp',
@@ -36,10 +25,6 @@ def load_opdp():
         urls=[''],
         logo='https://s3.amazonaws.com/cadasta-dev-tmp/etl-test/opdp.jpg',
         contacts=[]
-    )
-
-    OrganizationRole.objects.create(
-        organization=org, user=user, admin=True
     )
 
     proj1 = Project.objects.create(
@@ -120,19 +105,58 @@ def load_opdp():
     )
 
 
+def load_users():
+    from organization.models import Organization, OrganizationRole
+    from accounts.models import User
+
+    users = [{'username': 'opdpadmin',
+              'full_name': 'OPDP Admin', 'admin': True},
+             {'username': 'john', 'full_name':
+              'John Samorai', 'admin': True},
+             {'username': 'perista', 'full_name':
+              'Perista Muthii', 'admin': False},
+             {'username': 'esther', 'full_name':
+             'Esther Cheburet', 'admin': False}]
+
+    org = Organization.objects.get(slug='opdp')
+
+    for user in users:
+        u = User.objects.create(
+            username=user['username'],
+            email='',
+            full_name=user['full_name'],
+            email_verified=True,
+            last_login=datetime.now(tz=timezone.utc)
+        )
+        u.set_password('password')
+        u.save()
+        OrganizationRole.objects.create(
+            organization=org, user=u, admin=user['admin']
+        )
+
+
+def drop_users():
+    from organization.models import OrganizationRole
+    from accounts.models import User
+    users = ['opdpadmin', 'john', 'perista', 'esther']
+    for user in users:
+        try:
+            u = User.objects.get(username=user)
+            o = OrganizationRole.objects.get(user=u)
+            o.delete()
+            u.delete()
+        except:
+            pass
+
+
 def drop_opdp():
     """Drop OPDP data."""
     from organization.models import Organization
-    from accounts.models import User
+    drop_users()
     try:
         Organization.objects.get(slug='opdp').delete()
     except:
         pass
-    try:
-        User.objects.get(username='opdpadmin').delete()
-    except:
-        pass
-
 
 
 if __name__ == '__main__':
@@ -147,3 +171,4 @@ if __name__ == '__main__':
     else:
         drop_opdp()
         load_opdp()
+        load_users()

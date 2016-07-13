@@ -15,20 +15,9 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
 
 def load_uttaran():
     """Load Uttaran data."""
-    from organization.models import Organization, OrganizationRole, Project
+    from organization.models import Organization, Project
     from party.models import Party, TenureRelationship, TenureRelationshipType
     from spatial.models import SpatialUnit
-    from accounts.models import User
-
-    user = User.objects.create(
-        username='uttaranadmin',
-        email='info@uttaran.domain',
-        full_name='Uttaran Admin',
-        email_verified=True,
-        last_login=datetime.now(tz=timezone.utc))
-
-    user.set_password('password')
-    user.save()
 
     org = Organization.objects.create(
         name='Uttaran', slug='uttaran',
@@ -36,10 +25,6 @@ def load_uttaran():
         urls=['http://www.uttaran.net/'],
         logo='https://s3.amazonaws.com/cadasta-dev-tmp/etl-test/uttaran.jpg',
         contacts=[]
-    )
-
-    OrganizationRole.objects.create(
-        organization=org, user=user, admin=True
     )
 
     proj = Project.objects.create(
@@ -85,19 +70,63 @@ def load_uttaran():
     )
 
 
+def load_users():
+    from organization.models import Organization, OrganizationRole
+    from accounts.models import User
+
+    users = [{'username': 'uttaranadmin',
+              'full_name': 'Uttaran Admin', 'admin': True},
+             {'username': 'mamun_rashid', 'full_name':
+              'Mamun Ur Rashid', 'admin': True},
+             {'username': 'sampa_bala', 'full_name':
+              'Sampa Rani Bala', 'admin': False},
+             {'username': 'jahidul_ahsan', 'full_name':
+              'Jahidul Ahsan', 'admin': True},
+             {'username': 'salim_swapan', 'full_name':
+              'Shaikh Salim Akhter', 'admin': False},
+             {'username': 'zaghani', 'full_name':
+              'Zannat Ara Ghani', 'admin': True}]
+
+    org = Organization.objects.get(slug='uttaran')
+
+    for user in users:
+        u = User.objects.create(
+            username=user['username'],
+            email='',
+            full_name=user['full_name'],
+            email_verified=True,
+            last_login=datetime.now(tz=timezone.utc)
+        )
+        u.set_password('password')
+        u.save()
+        OrganizationRole.objects.create(
+            organization=org, user=u, admin=user['admin']
+        )
+
+
+def drop_users():
+    from organization.models import OrganizationRole
+    from accounts.models import User
+    users = ['uttaranadmin', 'mamun_rashid', 'sampa_bala',
+             'jahidul_ahsan', 'salim_swapan', 'zaghani']
+    for user in users:
+        try:
+            u = User.objects.get(username=user)
+            o = OrganizationRole.objects.get(user=u)
+            o.delete()
+            u.delete()
+        except:
+            pass
+
+
 def drop_uttaran():
     """Drop Uttaran data."""
     from organization.models import Organization
-    from accounts.models import User
+    drop_users()
     try:
         Organization.objects.get(slug='uttaran').delete()
     except:
         pass
-    try:
-        User.objects.get(username='uttaranadmin').delete()
-    except:
-        pass
-
 
 
 if __name__ == '__main__':
@@ -112,3 +141,4 @@ if __name__ == '__main__':
     else:
         drop_uttaran()
         load_uttaran()
+        load_users()
